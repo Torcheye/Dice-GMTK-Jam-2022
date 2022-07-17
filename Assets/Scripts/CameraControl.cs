@@ -9,7 +9,7 @@ public class CameraControl : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetMouseButton(1))
+        if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
             RotateCamera();
         _mousePosLast = Input.mousePosition;
     }

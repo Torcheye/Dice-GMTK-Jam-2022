@@ -1,14 +1,15 @@
-using System;
 using System.Collections;
 using DG.Tweening;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    public CameraControl cameraControl;
     public Transform diceModel;
     public GameObject shatteredModel;
+    public float respawnHeight;
+    public bool isMenu;
 
+    private CameraControl _cameraControl;
     private bool _canMove = true;
     private DiceFaceControl _diceFaceControl;
     private Vector3 _lastPos;
@@ -19,6 +20,7 @@ public class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         _diceFaceControl = diceModel.GetComponent<DiceFaceControl>();
+        _cameraControl = FindObjectOfType<CameraControl>();
         _isSpawning = true;
         _lastPos = transform.position;
         _lastRotation = diceModel.rotation;
@@ -26,7 +28,12 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
-        HandleMove(cameraControl.GetDirection());
+        HandleMove(_cameraControl.GetDirection());
+
+        if (transform.position.y < 0 && !_isSpawning)
+        {
+            _isSpawning = true;
+        }
     }
 
     private void HandleMove(Vector3 forward)
@@ -34,21 +41,20 @@ public class PlayerMovement : MonoBehaviour
         if (!_canMove || _isSpawning)
             return;
 
-        const float inputThreshold = 0.01f;
-
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
         float x = 0, z = 0;
+        if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+            x = 1;
+        else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+            x = -1;
+        else if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
+            z = 1;
+        else if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
+            z = -1;
 
-        if (Mathf.Abs(horizontal) < inputThreshold && Mathf.Abs(vertical) < inputThreshold)
+        if (Mathf.Abs(x) + Mathf.Abs(z) <= 0)
             return;
 
         _canMove = false;
-
-        if (Mathf.Abs(horizontal) > inputThreshold)
-            x = horizontal > 0 ? 1 : -1;
-        else if (Mathf.Abs(vertical) > inputThreshold)
-            z = vertical > 0 ? 1 : -1;
 
         Vector3 destLocal = forward * z + Vector3.Cross(Vector3.up, forward) * x;
         MoveToDest(destLocal);
@@ -56,9 +62,9 @@ public class PlayerMovement : MonoBehaviour
     private async void MoveToDest(Vector3 destLocal)
     {
         const float duration = .35f;
+        GameManager.Instance.PlaySoundWoosh();
 
         Vector3 dest = transform.TransformPoint(destLocal);
-
         diceModel.transform.DORotate(new Vector3(destLocal.z * 90, 0, -destLocal.x * 90), duration, RotateMode.WorldAxisAdd)
             .SetEase(Ease.OutExpo);
         await transform.DOLocalJump(dest, 1, 1, duration).SetEase(Ease.OutExpo).AsyncWaitForCompletion();
@@ -73,8 +79,10 @@ public class PlayerMovement : MonoBehaviour
         _canMove = true;
     }
 
-    public void StepOnGround(int gemCount)
+    public void StepOnGround(int gemCount, Transform destFloor = null)
     {
+        GameManager.Instance.PlaySoundFootstep();
+
         if (_isSpawning)
         {
             _isSpawning = false;
@@ -84,10 +92,26 @@ public class PlayerMovement : MonoBehaviour
         if (!_beginRecordPosition)
             _beginRecordPosition = true;
 
+        if (isMenu)
+        {
+            if (destFloor != null)
+                StartCoroutine(Success(destFloor));
+            return;
+        }
+
         if (gemCount == 0)
         {
             if (!_diceFaceControl.ChangeGroundFace(-1))
+            {
                 Shatter();
+            }
+            else
+            {
+                if (destFloor != null)
+                {
+                    StartCoroutine(Success(destFloor));
+                }
+            }
         }
         else
         {
@@ -95,8 +119,21 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    private IEnumerator Success(Transform destFloor)
+    {
+        destFloor.transform.DOMoveY(10, 3);
+        destFloor.transform.DORotate(new Vector3(0, 720, 0), 3, RotateMode.WorldAxisAdd);
+        transform.DOMoveY(10, 3);
+        transform.DORotate(new Vector3(0, 720, 0), 3, RotateMode.WorldAxisAdd);
+        yield return new WaitForSeconds(3);
+        GameManager.Instance.NextLevel();
+    }
+
     private void Shatter()
     {
+        GameManager.Instance.PlaySoundShatter();
+        GameManager.Instance.ShakeScreen();
+
         GameObject shatteredObject = Instantiate(shatteredModel, transform.position, Quaternion.identity);
         int childCount = shatteredObject.transform.childCount;
         Vector3 explosionCenter = shatteredObject.transform.position + Vector3.up * .5f;
@@ -111,10 +148,13 @@ public class PlayerMovement : MonoBehaviour
 
     public void StartRespawn()
     {
-        _isSpawning = true;
+        if (_isSpawning)
+        {
+            Respawn();
+        }
     }
 
-    public void Respawn(float respawnHeight)
+    public void Respawn()
     {
         GetComponent<Rigidbody>().velocity = Vector3.zero;
         transform.position = _lastPos + Vector3.up * respawnHeight;

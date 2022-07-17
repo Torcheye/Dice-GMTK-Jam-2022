@@ -59,4 +59,9 @@ public class DiceFaceControl : MonoBehaviour
                 return true;
         }
     }
+
+    private void OnBecameInvisible()
+    {
+        GetComponentInParent<PlayerMovement>().StartRespawn();
+    }
 }

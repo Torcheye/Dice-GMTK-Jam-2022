@@ -44,7 +44,7 @@ GameObject:
   - component: {fileID: 5856102091706468120}
   m_Layer: 0
   m_Name: Floor
-  m_TagString: Untagged
+  m_TagString: Floor
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -105,7 +105,7 @@ PrefabInstance:
     - target: {fileID: 4178881762161595660, guid: 44b3b991a437b19478416e3d0cbd1990,
         type: 3}
       propertyPath: startDelay.scalar
-      value: 0.5
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 4178881762161595660, guid: 44b3b991a437b19478416e3d0cbd1990,
         type: 3}

@@ -3,8 +3,6 @@ using UnityEngine;
 
 public class GameBound : MonoBehaviour
 {
-    public float respawnHeight;
-
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
@@ -17,7 +15,7 @@ public class GameBound : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            other.GetComponent<PlayerMovement>().Respawn(respawnHeight);
+            other.GetComponent<PlayerMovement>().Respawn();
         }
     }
 }

@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - LowerBound
+  - Floor
   layers:
   - Default
   - TransparentFX
